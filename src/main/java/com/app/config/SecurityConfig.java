@@ -1,8 +1,9 @@
 package com.app.config;
 
+import com.app.config.filter.JwtTokenValidator;
 import com.app.service.UserDetailService;
-import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.app.util.JwtUtils;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,11 +20,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@AllArgsConstructor
 public class SecurityConfig {
+
+    private final JwtUtils jwtUtils;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -32,12 +37,14 @@ public class SecurityConfig {
                 .httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(http -> {
-                    http.requestMatchers(HttpMethod.GET, "/auth/get").authenticated();
-                    http.requestMatchers(HttpMethod.POST, "/auth/post").hasAnyRole("ADMIN","USER");
-                    http.requestMatchers(HttpMethod.DELETE, "/auth/delete").hasAnyRole("ADMIN","USER");
-                    http.requestMatchers(HttpMethod.PUT, "/auth/put").hasAnyAuthority("UPDATE");
+                    http.requestMatchers(HttpMethod.POST, "/auth/**").permitAll();
+                    http.requestMatchers(HttpMethod.GET, "/method/get").authenticated();
+                    http.requestMatchers(HttpMethod.POST, "/method/post").hasAnyRole("ADMIN","USER");
+                    http.requestMatchers(HttpMethod.DELETE, "/method/delete").hasAnyRole("ADMIN","USER");
+                    http.requestMatchers(HttpMethod.PUT, "/method/put").hasAnyAuthority("UPDATE");
                     http.anyRequest().denyAll();
                 })
+                .addFilterBefore(new JwtTokenValidator(jwtUtils), BasicAuthenticationFilter.class)
                 .build();
     }
 
